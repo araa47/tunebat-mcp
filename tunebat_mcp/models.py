@@ -46,8 +46,10 @@ class Track(BaseModel):
         default=None, description="Album cover images"
     )
     cr: Optional[Any] = Field(default=None, description="Unknown field")
-    r: Optional[list[Any]] = Field(default=None, description="Unknown field")
-    er: Optional[list[Any]] = Field(default=None, description="Unknown field")
+    r: Optional[list[Any]] = Field(default=None, description="Recommendations")
+    er: Optional[list[Any]] = Field(
+        default=None, description="Extended recommendations"
+    )
 
     @property
     def title(self) -> str:
@@ -88,6 +90,52 @@ class Track(BaseModel):
     def spotify_id(self) -> str:
         """Get Spotify ID."""
         return self.id
+
+
+class SimilarTracksResponse(BaseModel):
+    """Model for Tunebat similar tracks response."""
+
+    data: Track = Field(description="Original track data with recommendations")
+
+    @property
+    def original_track(self) -> Track:
+        """Get the original track."""
+        return self.data
+
+    @property
+    def similar_tracks(self) -> list[Track]:
+        """Get the similar tracks from recommendations."""
+        recommendations = self.data.r or []
+        tracks: list[Track] = []
+        for track_data in recommendations:
+            if isinstance(track_data, dict):
+                try:
+                    track = Track.model_validate(track_data)
+                    tracks.append(track)
+                except Exception:
+                    # Skip invalid track data
+                    continue
+        return tracks
+
+    @property
+    def extended_recommendations(self) -> list[Track]:
+        """Get the extended recommendations."""
+        extended = self.data.er or []
+        tracks: list[Track] = []
+        for track_data in extended:
+            if isinstance(track_data, dict):
+                try:
+                    track = Track.model_validate(track_data)
+                    tracks.append(track)
+                except Exception:
+                    # Skip invalid track data
+                    continue
+        return tracks
+
+    @property
+    def all_recommendations(self) -> list[Track]:
+        """Get all recommendations (similar + extended)."""
+        return self.similar_tracks + self.extended_recommendations
 
 
 class SearchResponse(BaseModel):

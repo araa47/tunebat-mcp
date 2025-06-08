@@ -27,8 +27,13 @@ This server provides access to music analysis data from Tunebat.com:
 
 - search_tracks: Search for tracks by artist, title, or keywords
 - search_tracks_with_retry: Search for tracks with automatic retry on rate limiting
+- get_similar_tracks: Get similar tracks for a given Spotify track ID
 
 Returns detailed music analysis data including BPM, key, energy, danceability, and other audio features.
+
+Examples:
+- search_tracks("Daft Punk", 10) - Search for Daft Punk tracks
+- get_similar_tracks("7MK9eaTSGwGdKA4N7IPdDN", 15) - Get 15 similar tracks to the given track ID
 """
 
 
@@ -77,6 +82,38 @@ async def search_tracks_with_retry(
         "total_results": len(tracks),
         "tracks": [_track_to_dict(track) for track in tracks],
     }
+
+
+@mcp.tool()
+async def get_similar_tracks(track_id: str, limit: int = 20) -> dict[str, Any]:
+    """
+    Get similar tracks for a given track ID from Tunebat.
+
+    Args:
+        track_id: Spotify track ID (e.g., "7MK9eaTSGwGdKA4N7IPdDN")
+        limit: Maximum number of similar tracks to return (default: 20)
+
+    Returns:
+        Dictionary containing the original track and similar tracks with analysis data
+    """
+    try:
+        similar_response = await client.get_similar_tracks(track_id)
+
+        # Get all recommendations and limit them
+        all_similar = similar_response.all_recommendations[:limit]
+
+        return {
+            "track_id": track_id,
+            "original_track": _track_to_dict(similar_response.original_track),
+            "similar_tracks": [_track_to_dict(track) for track in all_similar],
+            "total_similar": len(all_similar),
+            "has_more": len(similar_response.all_recommendations) > limit,
+        }
+    except Exception as e:
+        return {
+            "error": f"Failed to get similar tracks: {str(e)}",
+            "track_id": track_id,
+        }
 
 
 def _track_to_dict(track: Any) -> dict[str, Any]:

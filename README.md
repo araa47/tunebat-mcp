@@ -23,6 +23,7 @@ A Model Context Protocol (MCP) server that provides access to Tunebat's music an
   - 🔊 Loudness and speechiness measurements
 - 🎭 **Smart Access**: Uses Playwright browser automation for reliable data retrieval
 - 🔄 **Robust**: Built-in retry mechanisms and error handling
+- 🎯 **Similar Tracks**: Find tracks similar to any given Spotify track ID
 
 ## ⚙️ MCP Client Configuration
 
@@ -89,6 +90,37 @@ A Model Context Protocol (MCP) server that provides access to Tunebat's music an
 [INFO] Top result: "One More Time" - BPM: 123, Danceability: 0.934
 ```
 
+### 🎯 Similar Tracks Discovery
+
+**Query**: "Get tracks similar to Michael Jackson's Thriller" 🔍✨
+
+**Sample Response**:
+```json
+{
+  "track_id": "2LlQb7Uoj1kKyGhlkBf9aC",
+  "original_track": {
+    "title": "Thriller",
+    "artists": ["Michael Jackson"],
+    "bpm": 118,
+    "key": "B Major",
+    "energy": 0.687,
+    "danceability": 0.771
+  },
+  "similar_tracks": [
+    {
+      "title": "Billie Jean",
+      "artists": ["Michael Jackson"],
+      "bpm": 117,
+      "key": "B Minor",
+      "energy": 0.457,
+      "danceability": 0.932
+    }
+  ],
+  "total_similar": 15,
+  "has_more": true
+}
+```
+
 ## 📋 Requirements
 
 This assumes you have [direnv](https://direnv.net/) and [uv](https://github.com/astral-sh/uv) installed 🛠️
@@ -99,6 +131,7 @@ Simply run `direnv allow` to setup the environment, you can read the contents of
 
 - 🔍 `search_tracks(query, limit)`: Search for tracks with basic functionality
 - 🔄 `search_tracks_with_retry(query, limit, max_retries)`: Search with automatic retry on rate limiting
+- 🎯 `get_similar_tracks(track_id, limit)`: Get similar tracks for a given Spotify track ID
 
 ## 🎼 About This Project
 

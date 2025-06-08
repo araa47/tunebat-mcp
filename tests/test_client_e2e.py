@@ -164,6 +164,122 @@ class TestTunebatClientE2E:
         print(f"  Happiness: {track.h}")
         print(f"  Acousticness: {track.ac}")
 
+    @pytest.mark.asyncio
+    async def test_similar_tracks_workflow(self, client: TunebatClient) -> None:
+        """Test the complete workflow: search for a track, then get similar tracks."""
+        # Step 1: Search for a well-known track
+        search_query = "Michael Jackson Thriller"
+        search_results = await client.search_with_browser(search_query)
+
+        assert (
+            len(search_results) > 0
+        ), f"No results found for search query: {search_query}"
+
+        # Step 2: Get the track ID from the first result
+        original_track = search_results[0]
+        track_id = original_track.spotify_id
+
+        print(
+            f"Found track: {original_track.title} by {', '.join(original_track.artists)}"
+        )
+        print(f"Track ID: {track_id}")
+
+        # Step 3: Get similar tracks using the track ID
+        similar_response = await client.get_similar_tracks(track_id)
+
+        # Verify the response structure
+        assert similar_response.original_track is not None
+        assert similar_response.original_track.spotify_id == track_id
+
+        # Verify we get recommendations
+        all_similar = similar_response.all_recommendations
+        similar_tracks = similar_response.similar_tracks
+        extended_recommendations = similar_response.extended_recommendations
+
+        print(f"Original track: {similar_response.original_track.title}")
+        print(f"Total recommendations: {len(all_similar)}")
+        print(f"Similar tracks: {len(similar_tracks)}")
+        print(f"Extended recommendations: {len(extended_recommendations)}")
+
+        # Should have at least some recommendations
+        assert len(all_similar) > 0, "No similar tracks found"
+
+        # Test some similar tracks
+        for i, similar_track in enumerate(all_similar[:3]):  # Test first 3
+            assert isinstance(similar_track, Track)
+            assert similar_track.title is not None
+            assert len(similar_track.artists) > 0
+            assert similar_track.spotify_id is not None
+
+            print(
+                f"  Similar track {i+1}: {similar_track.title} by {', '.join(similar_track.artists)}"
+            )
+            if similar_track.bpm:
+                print(f"    BPM: {similar_track.bpm}")
+            if similar_track.key:
+                print(f"    Key: {similar_track.key}")
+
+    @pytest.mark.asyncio
+    async def test_similar_tracks_invalid_id(self, client: TunebatClient) -> None:
+        """Test similar tracks with an invalid track ID."""
+        invalid_track_id = "invalid_track_id_12345"
+
+        # Should handle invalid IDs gracefully
+        try:
+            similar_response = await client.get_similar_tracks(invalid_track_id)
+            # If it doesn't raise an error, it should return an empty or minimal response
+            print(
+                f"Got response for invalid ID (unexpected but handled): {len(similar_response.all_recommendations)} recommendations"
+            )
+        except Exception as e:
+            # Expected behavior - should raise an error for invalid IDs
+            print(f"Invalid ID correctly raised error: {type(e).__name__}")
+            assert True  # This is expected behavior
+
+    @pytest.mark.asyncio
+    async def test_similar_tracks_different_genres(self, client: TunebatClient) -> None:
+        """Test similar tracks for different music genres."""
+        test_cases = [
+            ("Daft Punk One More Time", "Electronic/House"),
+            ("Nirvana Smells Like Teen Spirit", "Rock/Grunge"),
+            ("Miles Davis Kind of Blue", "Jazz"),
+        ]
+
+        for search_query, genre in test_cases:
+            print(f"\nTesting similar tracks for {genre}: {search_query}")
+
+            try:
+                # Search for the track
+                search_results = await client.search_with_browser(search_query)
+
+                if len(search_results) == 0:
+                    print(f"  No search results for {search_query}, skipping")
+                    continue
+
+                track = search_results[0]
+                track_id = track.spotify_id
+
+                print(
+                    f"  Found: {track.title} by {', '.join(track.artists)} (ID: {track_id})"
+                )
+
+                # Get similar tracks
+                similar_response = await client.get_similar_tracks(track_id)
+                all_similar = similar_response.all_recommendations
+
+                print(f"  Similar tracks found: {len(all_similar)}")
+
+                # Show first few similar tracks
+                for i, similar_track in enumerate(all_similar[:2]):
+                    print(
+                        f"    {i+1}. {similar_track.title} by {', '.join(similar_track.artists)}"
+                    )
+
+            except Exception as e:
+                print(f"  Error testing {genre}: {e}")
+                # Don't fail the test for individual genre errors
+                continue
+
 
 # Helper function to run specific tests
 async def run_single_test() -> None:

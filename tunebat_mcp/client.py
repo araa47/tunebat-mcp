@@ -8,7 +8,7 @@ from urllib.parse import quote_plus
 
 from playwright.async_api import async_playwright
 
-from .models import SearchResponse, Track, TunebatError
+from .models import SearchResponse, SimilarTracksResponse, Track, TunebatError
 
 
 class TunebatClient:
@@ -20,6 +20,7 @@ class TunebatClient:
     """
 
     BASE_URL = "https://api.tunebat.com/api/tracks/search"
+    SIMILAR_TRACKS_URL = "https://api.tunebat.com/api/tracks"
 
     def __init__(self, timeout: float = 30.0):
         """Initialize the client.
@@ -165,3 +166,97 @@ class TunebatClient:
                 raise
         # This should never be reached due to the raise in the except block
         return []
+
+    async def get_similar_tracks(self, track_id: str) -> SimilarTracksResponse:
+        """Get similar tracks for a given track ID.
+
+        Args:
+            track_id: Spotify track ID
+
+        Returns:
+            SimilarTracksResponse containing the original track and recommendations
+
+        Raises:
+            TunebatError: If the API request fails
+        """
+        url = f"{self.SIMILAR_TRACKS_URL}?trackId={track_id}"
+
+        try:
+            async with async_playwright() as p:
+                # Launch a headless browser with minimal arguments for better compatibility
+                browser = await p.chromium.launch(headless=True)
+
+                # Create a new page with realistic settings
+                page = await browser.new_page(
+                    user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                )
+
+                # Set realistic browser headers and properties
+                await page.set_extra_http_headers(
+                    {
+                        "Accept": "application/json, text/plain, */*",
+                        "Accept-Language": "en-US,en;q=0.9",
+                        "Accept-Encoding": "gzip, deflate, br",
+                        "Cache-Control": "no-cache",
+                        "Pragma": "no-cache",
+                        "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120"',
+                        "Sec-Ch-Ua-Mobile": "?0",
+                        "Sec-Ch-Ua-Platform": '"macOS"',
+                        "Sec-Fetch-Dest": "empty",
+                        "Sec-Fetch-Mode": "cors",
+                        "Sec-Fetch-Site": "same-origin",
+                    }
+                )
+
+                # Navigate to the API endpoint
+                response = await page.goto(url, wait_until="networkidle", timeout=30000)
+
+                if not response or response.status != 200:
+                    await browser.close()
+                    raise TunebatError(
+                        f"Browser request failed with status: {response.status if response else 'No response'}",
+                        status_code=response.status if response else None,
+                    )
+
+                # Get the page content and text before closing browser
+                content = await page.content()
+                page_text = await page.evaluate(
+                    'document.body.textContent || document.body.innerText || ""'
+                )
+                await browser.close()
+
+                # Extract JSON from the page content
+                try:
+                    # Look for JSON in <pre> tags or try to parse the body text
+                    if "<pre>" in content and "</pre>" in content:
+                        json_text = content.split("<pre>")[1].split("</pre>")[0]
+                    else:
+                        # Use the page text content we already extracted
+                        json_text = page_text.strip()
+
+                    # Parse the JSON response
+                    data = json.loads(json_text)
+
+                    # Normalize text as done in the original method
+                    if isinstance(data, str):
+                        normalized_text = unicodedata.normalize("NFD", data)
+                        cleaned_text = "".join(
+                            char
+                            for char in normalized_text
+                            if unicodedata.category(char) != "Mn"
+                        )
+                        cleaned_text = cleaned_text.replace("'", "'")
+                        data = json.loads(cleaned_text)
+
+                    # Create SimilarTracksResponse from the data
+                    similar_tracks_response = SimilarTracksResponse.model_validate(data)
+                    return similar_tracks_response
+
+                except (json.JSONDecodeError, KeyError, TypeError) as e:
+                    raise TunebatError(f"Failed to parse API response: {str(e)}") from e
+
+        except Exception as e:
+            if isinstance(e, TunebatError):
+                raise
+            raise TunebatError(f"Browser request failed: {str(e)}") from e

@@ -1,17 +1,15 @@
 [project]
-name = "tunebat_mcp"
+name = "tunebat-mcp"
 version = "0.1.0"
 description = "MCP server for Tunebat music analysis data"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "mcp>=1.0.0",
-    "requests>=2.31.0",
-    "beautifulsoup4>=4.12.0",
-    "lxml>=4.9.0",
+    "mcp[fastmcp]>=1.0.0",
     "pydantic>=2.0.0",
-    "playwright>=1.40.0",
-    "httpx>=0.25.0",
+    "click>=8.0.0",
+    "fastmcp>=2.7.1",
+    "playwright>=1.52.0",
 ]
 
 [project.optional-dependencies]
@@ -26,6 +24,13 @@ dev = [
 
 [project.scripts]
 tunebat-mcp = "tunebat_mcp.server:main"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.uv]
+package = true
 
 [tool.pyright]
 typeCheckingMode = "strict"
@@ -45,6 +50,8 @@ include_trailing_comma = true
 multi_line_output = 3
 
 [tool.ruff]
-select = ["E", "F", "B"]
 exclude = ["__pycache__", "terraform", ".git", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "B"]
 ignore = ["E501"]

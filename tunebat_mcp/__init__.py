@@ -7,6 +7,6 @@ __version__ = "0.1.0"
 __author__ = "Tunebat MCP"
 __description__ = "MCP server for Tunebat music analysis data"
 
-from .server import create_server
+from .server import main
 
-__all__ = ["create_server"] 
+__all__ = ["main"]

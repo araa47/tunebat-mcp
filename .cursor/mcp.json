@@ -9,6 +9,18 @@
             "args": [
                 "@playwright/mcp@latest"
             ]
+        },
+        "tunebat-mcp": {
+            "command": "uv",
+            "args": [
+                "run",
+                "--refresh-package",
+                "tunebat-mcp",
+                "--with",
+                ".",
+                "tunebat-mcp"
+            ],
+            "cwd": "."
         }
     }
 }

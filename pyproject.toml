@@ -5,7 +5,7 @@ description = "MCP server for Tunebat music analysis data"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "mcp[fastmcp]>=1.0.0",
+    "mcp>=1.0.0",
     "pydantic>=2.0.0",
     "click>=8.0.0",
     "fastmcp>=2.7.1",
@@ -17,7 +17,7 @@ dev = [
     "ruff>=0.6.3",
     "pre-commit>=3.3.3",
     "pytest",
-    "pytest-asyncio<0.23",
+    "pytest-asyncio",
     "pytest-cov",
     "pytest-playwright",
 ]
